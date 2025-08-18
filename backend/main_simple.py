@@ -35,11 +35,27 @@ app = FastAPI(title="Advanced RAG Document Q&A API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Advanced RAG Document Q&A API",
+        "status": "running",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/api/health",
+            "upload": "/api/upload",
+            "qa": "/api/qa",
+            "documents": "/api/documents",
+            "analytics": "/api/analytics"
+        },
+        "docs": "/docs"
+    }
 
 documents = {}
 chunks = []
