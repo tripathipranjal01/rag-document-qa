@@ -51,7 +51,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="https://rag-document-qa-iota.vercel.app")
+    return RedirectResponse(url="/docs")
 
 @app.get("/debug")
 async def debug():
