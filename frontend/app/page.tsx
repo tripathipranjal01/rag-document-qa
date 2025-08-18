@@ -119,12 +119,15 @@ export default function Home() {
 
       if (response.ok) {
         const result = await response.json();
+        console.log('Upload result:', result);
         setUploadStatus({ type: 'success', message: `File uploaded successfully: ${result.filename}` });
         
-        // Refresh documents list immediately
-        setTimeout(() => fetchDocuments(), 1000);
+        // Refresh documents list immediately and after a delay
+        await fetchDocuments();
+        setTimeout(() => fetchDocuments(), 2000);
       } else {
         const error = await response.json();
+        console.error('Upload error:', error);
         setUploadStatus({ type: 'error', message: `Upload failed: ${error.detail}` });
       }
     } catch (error) {
@@ -142,7 +145,10 @@ export default function Home() {
       });
       if (response.ok) {
         const docs = await response.json();
+        console.log('Fetched documents:', docs);
         setDocuments(docs);
+      } else {
+        console.error('Failed to fetch documents:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch documents:', error);
