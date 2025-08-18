@@ -1,6 +1,57 @@
 # Deployment Guide
 
-## **Option 1: Railway (Recommended - Free & Easy)**
+## **Option 1: Render (Recommended - Free & Easy)**
+
+### **Step 1: Create Render Account**
+1. Go to [render.com](https://render.com)
+2. Sign up with GitHub
+3. Connect your GitHub repository
+
+### **Step 2: Deploy Backend**
+1. Click "New +" → "Web Service"
+2. Connect your GitHub repository: `tripathipranjal01/rag-document-qa`
+3. Configure the service:
+   - **Name**: `rag-document-qa-backend`
+   - **Environment**: `Python`
+   - **Build Command**: `pip install -r backend/requirements.txt`
+   - **Start Command**: `cd backend && python main_simple.py`
+   - **Plan**: `Free`
+
+### **Step 3: Set Environment Variables**
+In Render dashboard, add:
+- `OPENAI_API_KEY`: Your OpenAI API key (mark as secret)
+
+### **Step 4: Deploy**
+Click "Create Web Service" - Render will automatically deploy your app.
+
+### **Step 5: Get Your URL**
+Render will provide: `https://rag-document-qa-backend.onrender.com`
+
+## **Option 2: Heroku**
+
+### **Step 1: Create Heroku Account**
+1. Go to [heroku.com](https://heroku.com)
+2. Create account and install CLI
+
+### **Step 2: Deploy**
+```bash
+# Login to Heroku
+heroku login
+
+# Create app
+heroku create your-rag-app
+
+# Set environment variables
+heroku config:set OPENAI_API_KEY="your_api_key_here"
+
+# Deploy
+git push heroku main
+```
+
+### **Step 3: Get Your URL**
+Heroku will provide: `https://your-rag-app.herokuapp.com`
+
+## **Option 2: Railway**
 
 ### **Step 1: Create Railway Account**
 1. Go to [railway.app](https://railway.app)
@@ -30,48 +81,11 @@ In Railway dashboard:
 ### **Step 4: Get Your URL**
 Railway will provide: `https://your-app-name.railway.app`
 
-## **Option 2: Heroku**
-
-### **Step 1: Create Heroku Account**
-1. Go to [heroku.com](https://heroku.com)
-2. Create account and install CLI
-
-### **Step 2: Deploy**
-```bash
-# Login to Heroku
-heroku login
-
-# Create app
-heroku create your-rag-app
-
-# Set environment variables
-heroku config:set OPENAI_API_KEY="your_api_key_here"
-
-# Deploy
-git push heroku main
-```
-
-### **Step 3: Get Your URL**
-Heroku will provide: `https://your-rag-app.herokuapp.com`
-
-## **Option 3: Render**
-
-### **Step 1: Create Render Account**
-1. Go to [render.com](https://render.com)
-2. Sign up with GitHub
-
-### **Step 2: Deploy**
-1. Connect your GitHub repository
-2. Create new Web Service
-3. Set build command: `pip install -r backend/requirements.txt`
-4. Set start command: `cd backend && python main_simple.py`
-5. Add environment variable: `OPENAI_API_KEY`
-
 ## **Testing Deployment**
 
 ### **1. Health Check**
 ```bash
-curl https://your-app-url.railway.app/api/health
+curl https://rag-document-qa-backend.onrender.com/api/health
 ```
 
 Expected response:
@@ -125,6 +139,11 @@ python tests/test_integration.py
 
 ### **Logs and Monitoring**
 
+**Render:**
+- View logs in the Render dashboard
+- Real-time log streaming available
+- Automatic restarts on failure
+
 **Railway:**
 ```bash
 railway logs
@@ -139,18 +158,18 @@ heroku ps
 
 ## **Cost Estimation**
 
+### **Render (Free Tier)**
+- 750 hours/month free
+- $7/month for always-on service
+- Perfect for demos and testing
+
 ### **Railway (Free Tier)**
 - 500 hours/month free
 - $5/month for additional usage
-- Perfect for demos and testing
 
 ### **Heroku (Free Tier Discontinued)**
 - Basic dyno: $7/month
 - Eco dyno: $5/month
-
-### **Render (Free Tier)**
-- 750 hours/month free
-- $7/month for always-on service
 
 ## **Security Checklist**
 

@@ -79,7 +79,7 @@ class TestRAGAPI:
 def test_deployment_health():
     """Test deployment health endpoint"""
     try:
-        response = requests.get("https://your-app-name.railway.app/api/health", timeout=10)
+        response = requests.get("https://rag-document-qa-backend.onrender.com/api/health", timeout=10)
         assert response.status_code == 200
         data = response.json()
         assert data["status"] in ["healthy", "error"]

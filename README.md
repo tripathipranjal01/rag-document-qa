@@ -296,9 +296,9 @@ npm run dev
 ### **Deployment**
 
 For production deployment, see `DEPLOYMENT.md` for detailed instructions on:
-- Railway (recommended - free tier)
+- Render (recommended - free tier)
+- Railway
 - Heroku
-- Render
 - Environment variable setup
 - Health check validation
 
