@@ -172,9 +172,9 @@ This project implements a complete RAG-based document Q&A system that meets all 
 ## **Quick Start**
 
 ### Prerequisites
-- Python 3.9+
-- Node.js 18+
-- OpenAI API key
+- ✅ Python 3.9+ installed
+- ✅ Node.js 18+ installed
+- ✅ OpenAI API key (required for functionality)
 
 ### **Option 1: Automated Setup (Recommended)**
 Run the setup script to automatically check prerequisites and install dependencies:
@@ -276,6 +276,31 @@ This will validate:
 - ✅ Frontend is accessible
 - ✅ API key is valid
 - ✅ Upload functionality works
+
+### **Running the Application**
+
+**Backend (Terminal 1):**
+```bash
+cd backend
+python main_simple.py
+```
+✅ Backend will be running at `http://localhost:8001`
+
+**Frontend (Terminal 2):**
+```bash
+cd frontend
+npm run dev
+```
+✅ Frontend will be running at `http://localhost:3000`
+
+### **Deployment**
+
+For production deployment, see `DEPLOYMENT.md` for detailed instructions on:
+- Railway (recommended - free tier)
+- Heroku
+- Render
+- Environment variable setup
+- Health check validation
 
 ## **API Endpoints**
 
@@ -405,7 +430,23 @@ This will validate:
 
 ## **Testing**
 
-### Manual Testing Checklist
+### **Integration Tests**
+Run comprehensive integration tests:
+
+```bash
+python tests/test_integration.py
+```
+
+This tests:
+- ✅ Health endpoint validation
+- ✅ Session management
+- ✅ Document upload functionality
+- ✅ Q&A endpoint with citations
+- ✅ Documents list retrieval
+- ✅ Analytics endpoint
+- ✅ Deployment health check
+
+### **Manual Testing Checklist**
 
 1. **Document Upload**
    - [ ] Upload PDF file

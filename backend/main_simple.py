@@ -21,17 +21,14 @@ import logging
 from collections import defaultdict, Counter
 import hashlib
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Set OpenAI API key - IMPORTANT: Replace with your actual API key
 api_key = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 if api_key == "your_openai_api_key_here":
-    print("⚠️  WARNING: Please set your OpenAI API key!")
-    print("   Option 1: Set environment variable: export OPENAI_API_KEY='your_key_here'")
-    print("   Option 2: Edit this file and replace 'your_openai_api_key_here' with your actual key")
-    print("   The application will not work without a valid API key!")
+    print("Please set your OpenAI API key!")
+    print("Option 1: Set environment variable: export OPENAI_API_KEY='your_key_here'")
+    print("Option 2: Edit this file and replace 'your_openai_api_key_here' with your actual key")
 openai.api_key = api_key
 
 app = FastAPI(title="Advanced RAG Document Q&A API")
@@ -44,13 +41,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global storage with session isolation
-documents = {}  # {session_id: {doc_id: doc_data}}
-chunks = []     # Global chunks with session_id
-sessions = {}   # {session_id: session_data}
+documents = {}
+chunks = []
+sessions = {}
 DATA_FILE = "data_simple.pkl"
 
-# 🚀 Advanced Features: Analytics & Monitoring
 analytics = {
     "total_queries": 0,
     "total_documents": 0,
@@ -67,13 +62,11 @@ analytics = {
     }
 }
 
-# 🚀 Collaboration Features
-shared_documents = {}  # {doc_id: {shared_by: session_id, shared_with: [session_ids], permissions: "read"|"write"}}
-document_comments = {}  # {doc_id: [{session_id, comment, timestamp}]}
+shared_documents = {}
+document_comments = {}
 
-# 🚀 Performance Optimization: Caching
-embedding_cache = {}  # Simple in-memory cache for embeddings
-query_cache = {}      # Cache for similar queries
+embedding_cache = {}
+query_cache = {}
 
 def get_session_id(request: Request) -> str:
     """Get or create session ID from cookies"""
@@ -850,4 +843,5 @@ async def clear_session(request: Request, response: Response):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    port = int(os.getenv("PORT", 8001))
+    uvicorn.run(app, host="0.0.0.0", port=port)
