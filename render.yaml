@@ -4,8 +4,8 @@ services:
     env: python
     plan: free
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: python main_simple.py
+    buildCommand: pip install -r requirements_simple.txt
+    startCommand: python ultra_simple.py
     envVars:
       - key: OPENAI_API_KEY
         sync: false
