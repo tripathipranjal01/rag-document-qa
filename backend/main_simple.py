@@ -36,7 +36,14 @@ app = FastAPI(title="Advanced RAG Document Q&A API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "*"],
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://localhost:3001", 
+        "http://127.0.0.1:3000", 
+        "http://127.0.0.1:3001",
+        "https://rag-document-qa-iota.vercel.app",
+        "https://rag-document-qa.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,7 +51,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/docs")
+    return RedirectResponse(url="https://rag-document-qa-iota.vercel.app")
 
 @app.get("/debug")
 async def debug():
