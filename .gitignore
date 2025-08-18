@@ -76,7 +76,6 @@ logs/
 *.log
 
 # Test files
-*.txt
 test_*.txt
 cookies*.txt
 fresh_*.txt
