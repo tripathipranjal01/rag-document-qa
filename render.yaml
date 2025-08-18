@@ -10,7 +10,7 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: PYTHON_VERSION
-        value: 3.9.18
+        value: 3.11.7
       - key: PORT
         value: 10000
       - key: MAX_UPLOAD_MB
