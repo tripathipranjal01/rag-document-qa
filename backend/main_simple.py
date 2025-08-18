@@ -51,7 +51,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/docs")
+    return {"message": "RAG Document Q&A Backend is running", "status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.get("/debug")
 async def debug():
