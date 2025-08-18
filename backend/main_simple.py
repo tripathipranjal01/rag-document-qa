@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 import os
 import uuid
 from openai import OpenAI
@@ -40,8 +41,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from fastapi.responses import HTMLResponse
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
