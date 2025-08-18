@@ -41,21 +41,55 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
+from fastapi.responses import HTMLResponse
+
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    return {
-        "message": "Advanced RAG Document Q&A API",
-        "status": "running",
-        "version": "1.0.0",
-        "endpoints": {
-            "health": "/api/health",
-            "upload": "/api/upload",
-            "qa": "/api/qa",
-            "documents": "/api/documents",
-            "analytics": "/api/analytics"
-        },
-        "docs": "/docs"
-    }
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Advanced RAG Document Q&A API</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #333; }
+            .endpoint { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; }
+            .status { color: green; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 Advanced RAG Document Q&A API</h1>
+            <p class="status">✅ Status: Running</p>
+            <p>Version: 1.0.0</p>
+            
+            <h2>Available Endpoints:</h2>
+            <div class="endpoint">
+                <strong>Health Check:</strong> <a href="/api/health">/api/health</a>
+            </div>
+            <div class="endpoint">
+                <strong>Upload Documents:</strong> POST /api/upload
+            </div>
+            <div class="endpoint">
+                <strong>Ask Questions:</strong> POST /api/qa
+            </div>
+            <div class="endpoint">
+                <strong>List Documents:</strong> <a href="/api/documents">/api/documents</a>
+            </div>
+            <div class="endpoint">
+                <strong>Analytics:</strong> <a href="/api/analytics">/api/analytics</a>
+            </div>
+            <div class="endpoint">
+                <strong>API Documentation:</strong> <a href="/docs">/docs</a>
+            </div>
+            
+            <h2>Quick Test:</h2>
+            <p>Try uploading a document and asking questions about it!</p>
+        </div>
+    </body>
+    </html>
+    """
 
 documents = {}
 chunks = []
