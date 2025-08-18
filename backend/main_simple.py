@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 import os
 import uuid
 from openai import OpenAI
@@ -44,7 +44,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Advanced RAG Document Q&A API", "status": "running"}
+    return RedirectResponse(url="/docs")
 
 @app.get("/debug")
 async def debug():
