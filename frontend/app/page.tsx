@@ -65,9 +65,11 @@ export default function Home() {
     fetchDocuments();
   }, []);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://rag-document-qa-fv4c.onrender.com';
+
   const fetchSessionInfo = async () => {
     try {
-      const response = await fetch('http://localhost:8001/api/session', {
+      const response = await fetch(`${API_BASE_URL}/api/session`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -81,7 +83,7 @@ export default function Home() {
 
   const clearSession = async () => {
     try {
-      const response = await fetch('http://localhost:8001/api/session', {
+      const response = await fetch(`${API_BASE_URL}/api/session`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -109,7 +111,7 @@ export default function Home() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8001/api/upload', {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
         body: formData,
         credentials: 'include', // Include cookies for session
@@ -135,7 +137,7 @@ export default function Home() {
 
   const fetchDocuments = async () => {
     try {
-      const response = await fetch('http://localhost:8001/api/documents', {
+      const response = await fetch(`${API_BASE_URL}/api/documents`, {
         credentials: 'include', // Include cookies for session
       });
       if (response.ok) {
@@ -149,7 +151,7 @@ export default function Home() {
 
   const fetchDocumentContent = async (docId: string) => {
     try {
-      const response = await fetch(`http://localhost:8001/api/documents/${docId}/content`, {
+              const response = await fetch(`${API_BASE_URL}/api/documents/${docId}/content`, {
         credentials: 'include', // Include cookies for session
       });
       if (response.ok) {
@@ -177,7 +179,7 @@ export default function Home() {
 
   const deleteDocument = async (docId: string) => {
     try {
-      const response = await fetch(`http://localhost:8001/api/documents/${docId}`, {
+              const response = await fetch(`${API_BASE_URL}/api/documents/${docId}`, {
         method: 'DELETE',
         credentials: 'include', // Include cookies for session
       });
@@ -202,7 +204,7 @@ export default function Home() {
     setCitations([]);
 
     try {
-      const response = await fetch('http://localhost:8001/api/qa', {
+      const response = await fetch(`${API_BASE_URL}/api/qa`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
