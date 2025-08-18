@@ -13,7 +13,7 @@
 3. Configure the service:
    - **Name**: `rag-document-qa-backend`
    - **Environment**: `Python`
-   - **Build Command**: `pip install -r backend/requirements.txt`
+   - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `cd backend && python main_simple.py`
    - **Plan**: `Free`
 
