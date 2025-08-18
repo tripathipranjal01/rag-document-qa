@@ -46,6 +46,10 @@ app.add_middleware(
 async def root():
     return {"message": "Advanced RAG Document Q&A API", "status": "running"}
 
+@app.get("/debug")
+async def debug():
+    return {"message": "Debug endpoint working", "timestamp": datetime.now().isoformat()}
+
 documents = {}
 chunks = []
 sessions = {}
