@@ -176,6 +176,21 @@ This project implements a complete RAG-based document Q&A system that meets all 
 - Node.js 18+
 - OpenAI API key
 
+### **Option 1: Automated Setup (Recommended)**
+Run the setup script to automatically check prerequisites and install dependencies:
+
+```bash
+python setup.py
+```
+
+This script will:
+- ✅ Check Python and Node.js versions
+- ✅ Validate OpenAI API key configuration
+- ✅ Install all dependencies
+- ✅ Provide clear error messages and instructions
+
+### **Option 2: Manual Setup**
+
 ### Backend Setup
 
 1. **Navigate to backend directory:**
@@ -194,11 +209,20 @@ This project implements a complete RAG-based document Q&A system that meets all 
    pip install -r requirements.txt
    ```
 
-4. **Set OpenAI API key:**
+4. **Set OpenAI API key (IMPORTANT):**
+   
+   **Option 1: Environment Variable (Recommended)**
    ```bash
-   export OPENAI_API_KEY="your_openai_api_key_here"
+   export OPENAI_API_KEY="your_actual_openai_api_key_here"
    ```
-   Or edit the API key directly in `main_simple.py`
+   
+   **Option 2: Edit the file directly**
+   Open `main_simple.py` and replace line 27:
+   ```python
+   openai.api_key = "your_actual_openai_api_key_here"
+   ```
+   
+   **⚠️ IMPORTANT**: You must replace `"your_openai_api_key_here"` with your actual OpenAI API key, otherwise the application will not work!
 
 5. **Start the backend:**
    ```bash
@@ -222,7 +246,36 @@ This project implements a complete RAG-based document Q&A system that meets all 
    ```bash
    npm run dev
    ```
-   The frontend will be available at `http://localhost:3001`
+   The frontend will be available at `http://localhost:3000`
+
+### **Troubleshooting**
+
+**If you get API key errors:**
+- Make sure you've set a valid OpenAI API key
+- Check that the API key has sufficient credits
+- Verify the API key format starts with `sk-`
+
+**If the frontend can't connect to backend:**
+- Ensure backend is running on port 8001
+- Check that CORS is properly configured
+- Verify both services are running simultaneously
+
+**If you get dependency errors:**
+- Make sure you're using Python 3.9+ and Node.js 18+
+- Try reinstalling dependencies: `pip install -r requirements.txt` and `npm install`
+
+### **Testing Your Setup**
+After setting up, you can test that everything is working:
+
+```bash
+python test_setup.py
+```
+
+This will validate:
+- ✅ Backend is running and healthy
+- ✅ Frontend is accessible
+- ✅ API key is valid
+- ✅ Upload functionality works
 
 ## **API Endpoints**
 

@@ -25,7 +25,14 @@ import hashlib
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-openai.api_key = "your_openai_api_key_here"
+# Set OpenAI API key - IMPORTANT: Replace with your actual API key
+api_key = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
+if api_key == "your_openai_api_key_here":
+    print("⚠️  WARNING: Please set your OpenAI API key!")
+    print("   Option 1: Set environment variable: export OPENAI_API_KEY='your_key_here'")
+    print("   Option 2: Edit this file and replace 'your_openai_api_key_here' with your actual key")
+    print("   The application will not work without a valid API key!")
+openai.api_key = api_key
 
 app = FastAPI(title="Advanced RAG Document Q&A API")
 
@@ -312,8 +319,23 @@ def process_document_sync(file_id: str, file_path: str, filename: str, file_ext:
 
 @app.get("/api/health")
 async def health_check():
-    """Enhanced health check with analytics"""
+    """Enhanced health check with analytics and API key validation"""
     cleanup_old_sessions()
+    
+    # Check API key status
+    api_key_status = "valid"
+    api_key_message = "API key is configured"
+    
+    if openai.api_key == "your_openai_api_key_here":
+        api_key_status = "error"
+        api_key_message = "OpenAI API key not configured - please set your API key"
+    else:
+        try:
+            # Test API key with a simple request
+            openai.models.list()
+        except Exception as e:
+            api_key_status = "error"
+            api_key_message = f"API key validation failed: {str(e)}"
     
     # Calculate performance metrics
     avg_query_time = np.mean(analytics["query_times"]) if analytics["query_times"] else 0
@@ -322,8 +344,12 @@ async def health_check():
                           if datetime.fromisoformat(s["last_activity"]) > datetime.now() - timedelta(hours=1)])
     
     return {
-        "status": "healthy",
+        "status": "healthy" if api_key_status == "valid" else "error",
         "message": "Advanced RAG API is running",
+        "api_key": {
+            "status": api_key_status,
+            "message": api_key_message
+        },
         "documents_count": analytics["total_documents"],
         "chunks_count": analytics["total_chunks"],
         "sessions_count": total_sessions,
