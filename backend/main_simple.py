@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import uuid
-import openai
+from openai import OpenAI
 import PyPDF2
 import re
 import json
@@ -29,7 +29,7 @@ if api_key == "your_openai_api_key_here":
     print("Please set your OpenAI API key!")
     print("Option 1: Set environment variable: export OPENAI_API_KEY='your_key_here'")
     print("Option 2: Edit this file and replace 'your_openai_api_key_here' with your actual key")
-openai.api_key = api_key
+client = OpenAI(api_key=api_key)
 
 app = FastAPI(title="Advanced RAG Document Q&A API")
 
@@ -163,11 +163,11 @@ class RAGProcessor:
             return embedding_cache[text_hash]
         
         try:
-            response = openai.Embedding.create(
+            response = client.embeddings.create(
                 model="text-embedding-3-small",
                 input=text
             )
-            embedding = response['data'][0]['embedding']
+            embedding = response.data[0].embedding
             
             # Cache the embedding
             embedding_cache[text_hash] = embedding
@@ -319,13 +319,13 @@ async def health_check():
     api_key_status = "valid"
     api_key_message = "API key is configured"
     
-    if openai.api_key == "your_openai_api_key_here":
+    if api_key == "your_openai_api_key_here":
         api_key_status = "error"
         api_key_message = "OpenAI API key not configured - please set your API key"
     else:
         try:
             # Test API key with a simple request
-            openai.models.list()
+            client.models.list()
         except Exception as e:
             api_key_status = "error"
             api_key_message = f"API key validation failed: {str(e)}"
@@ -736,7 +736,7 @@ async def ask_question(request: Request):
         context = "\n\n".join(context_chunks)
         
         # Generate answer using OpenAI
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
