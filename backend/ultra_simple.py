@@ -36,10 +36,51 @@ if not api_key:
     print("WARNING: No OpenAI API key found!")
 client = OpenAI(api_key=api_key) if api_key else None
 
-# Simple in-memory storage
-documents = {}
-chunks = []
-sessions = {}
+# Simple file-based storage
+import pickle
+
+DATA_FILE = "simple_data.pkl"
+
+def load_data():
+    """Load data from file"""
+    global documents, chunks, sessions
+    try:
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "rb") as f:
+                data = pickle.load(f)
+                documents = data.get("documents", {})
+                chunks = data.get("chunks", [])
+                sessions = data.get("sessions", {})
+        else:
+            documents = {}
+            chunks = []
+            sessions = {}
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        documents = {}
+        chunks = []
+        sessions = {}
+
+def save_data():
+    """Save data to file"""
+    try:
+        data = {
+            "documents": documents,
+            "chunks": chunks,
+            "sessions": sessions
+        }
+        with open(DATA_FILE, "wb") as f:
+            pickle.dump(data, f)
+    except Exception as e:
+        print(f"Error saving data: {e}")
+
+# Load data on startup
+load_data()
+
+# Initialize storage
+documents = documents if 'documents' in globals() else {}
+chunks = chunks if 'chunks' in globals() else []
+sessions = sessions if 'sessions' in globals() else {}
 
 def get_session_id(request: Request) -> str:
     """Get or create session ID"""
@@ -50,6 +91,7 @@ def get_session_id(request: Request) -> str:
             "id": session_id,
             "created_at": datetime.now().isoformat(),
         }
+        save_data()
     return session_id
 
 def simple_chunk_text(text: str, chunk_size: int = 1000) -> List[str]:
@@ -211,6 +253,9 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
             "session_id": session_id,
             "chunk_index": i
         })
+    
+    # Save data after upload
+    save_data()
     
     return {
         "message": "File uploaded successfully",
