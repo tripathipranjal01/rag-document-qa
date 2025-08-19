@@ -44,6 +44,7 @@ interface DocumentContent {
 
 export default function Home() {
   const [uploading, setUploading] = useState(false);
+  const [uploadingFileName, setUploadingFileName] = useState<string>('');
   const [documents, setDocuments] = useState<Document[]>([]);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
@@ -106,6 +107,7 @@ export default function Home() {
     if (!file) return;
 
     setUploading(true);
+    setUploadingFileName(file.name);
     setUploadStatus(null);
     const formData = new FormData();
     formData.append('file', file);
@@ -303,13 +305,27 @@ export default function Home() {
                 className="hidden"
                 id="file-upload"
                 ref={fileInputRef}
+                disabled={uploading}
               />
               <label
                 htmlFor="file-upload"
-                className="flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+                className={`flex items-center px-4 py-2 font-medium rounded-lg transition-colors cursor-pointer ${
+                  uploading 
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Upload Document
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload Document
+                  </>
+                )}
               </label>
             </div>
           </div>
@@ -632,6 +648,29 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Upload Loading Modal */}
+      {uploading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 shadow-2xl max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Uploading Document</h3>
+              <p className="text-gray-600 text-sm mb-2">
+                {uploadingFileName}
+              </p>
+              <p className="text-gray-600 text-sm">
+                Please wait while we process your document. This may take a few moments...
+              </p>
+              <div className="mt-4 flex items-center justify-center space-x-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Upload Status */}
       {uploadStatus && (
