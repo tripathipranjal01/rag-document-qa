@@ -65,7 +65,7 @@ export default function Home() {
     fetchDocuments();
   }, []);
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://rag-document-qa-fv4c.onrender.com';
+  const API_BASE_URL = 'http://localhost:8001';
 
   const fetchSessionInfo = async () => {
     try {
@@ -582,7 +582,7 @@ export default function Home() {
                                   : 'text-gray-600 hover:text-gray-900'
                               }`}
                             >
-                              Chunks ({documentContent.chunks.length})
+                              Chunks ({documentContent.chunks?.length || 0})
                             </button>
                           </div>
                         </div>
@@ -594,7 +594,7 @@ export default function Home() {
                             </div>
                           ) : (
                             <div className="space-y-4">
-                              {documentContent.chunks.map((chunk, index) => (
+                              {documentContent.chunks?.map((chunk, index) => (
                                 <div
                                   key={chunk.id}
                                   className={`p-4 rounded-lg border ${

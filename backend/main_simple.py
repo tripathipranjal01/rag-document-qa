@@ -11,7 +11,7 @@ import pickle
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from docx import Document as DocxDocument
-# import tiktoken  # Commented out due to Rust compilation issues
+import tiktoken
 import numpy as np
 import time
 from PIL import Image
@@ -25,25 +25,14 @@ import hashlib
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-api_key = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
-if api_key == "your_openai_api_key_here":
-    print("Please set your OpenAI API key!")
-    print("Option 1: Set environment variable: export OPENAI_API_KEY='your_key_here'")
-    print("Option 2: Edit this file and replace 'your_openai_api_key_here' with your actual key")
+api_key = "your_openai_api_key_here"
 client = OpenAI(api_key=api_key)
 
 app = FastAPI(title="Advanced RAG Document Q&A API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://localhost:3001", 
-        "http://127.0.0.1:3000", 
-        "http://127.0.0.1:3001",
-        "https://rag-document-qa-iota.vercel.app",
-        "https://rag-document-qa.vercel.app"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -152,23 +141,18 @@ load_data()
 
 class RAGProcessor:
     def __init__(self):
-        # Simple token counting using word-based approach
+        self.encoding = tiktoken.get_encoding("cl100k_base")
         self.chunk_size = 800
         self.chunk_overlap = 150
     
-    def count_tokens(self, text: str) -> int:
-        """Simple token counting using word-based approach"""
-        # Rough approximation: 1 token ≈ 4 characters or 1 word
-        return len(text.split())
-    
     def chunk_text(self, text: str) -> List[str]:
-        """Chunk text with overlap using word-based approach"""
-        words = text.split()
+        """Chunk text with overlap"""
+        tokens = self.encoding.encode(text)
         chunks = []
         
-        for i in range(0, len(words), self.chunk_size - self.chunk_overlap):
-            chunk_words = words[i:i + self.chunk_size]
-            chunk_text = " ".join(chunk_words)
+        for i in range(0, len(tokens), self.chunk_size - self.chunk_overlap):
+            chunk_tokens = tokens[i:i + self.chunk_size]
+            chunk_text = self.encoding.decode(chunk_tokens)
             if chunk_text.strip():
                 chunks.append(chunk_text)
         
