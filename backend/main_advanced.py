@@ -812,4 +812,9 @@ async def clear_session(request: Request, response: Response):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    import os
+    
+    # Get port from environment variable or use default
+    port = int(os.getenv("PORT", 8001))
+    
+    uvicorn.run(app, host="0.0.0.0", port=port)
