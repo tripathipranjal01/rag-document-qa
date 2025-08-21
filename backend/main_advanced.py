@@ -10,7 +10,7 @@ import pickle
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from docx import Document as DocxDocument
-import tiktoken
+# import tiktoken  # Removed to avoid Rust compilation issues on Render
 import numpy as np
 import time
 from PIL import Image
@@ -136,18 +136,17 @@ load_data()
 
 class RAGProcessor:
     def __init__(self):
-        self.encoding = tiktoken.get_encoding("cl100k_base")
         self.chunk_size = 800
         self.chunk_overlap = 150
     
     def chunk_text(self, text: str) -> List[str]:
-        """Chunk text with overlap"""
-        tokens = self.encoding.encode(text)
+        """Chunk text with overlap using simple word-based approach"""
+        words = text.split()
         chunks = []
         
-        for i in range(0, len(tokens), self.chunk_size - self.chunk_overlap):
-            chunk_tokens = tokens[i:i + self.chunk_size]
-            chunk_text = self.encoding.decode(chunk_tokens)
+        for i in range(0, len(words), self.chunk_size - self.chunk_overlap):
+            chunk_words = words[i:i + self.chunk_size]
+            chunk_text = ' '.join(chunk_words)
             if chunk_text.strip():
                 chunks.append(chunk_text)
         
