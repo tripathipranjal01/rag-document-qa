@@ -678,6 +678,15 @@ async def ask_question(request: Request):
                     session_docs.append(docs[share_doc_id])
                     break
     
+    # If no documents found in current session, try to find documents from recent sessions (fallback)
+    if not session_docs:
+        # Get all indexed documents from any session
+        for owner_session, docs in documents.items():
+            for doc in docs.values():
+                if doc.get("status") == "indexed":
+                    session_docs.append(doc)
+        logger.info(f"No documents found for session {session_id}, using fallback with {len(session_docs)} total documents")
+    
     if not session_docs:
         return {
             "answer": "No documents uploaded yet. Please upload a document first.",
