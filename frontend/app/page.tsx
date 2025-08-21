@@ -159,12 +159,32 @@ export default function Home() {
 
   const fetchDocumentContent = async (docId: string) => {
     try {
-              const response = await fetch(`${API_BASE_URL}/api/documents/${docId}/content`, {
+      // Fetch document content
+      const contentResponse = await fetch(`${API_BASE_URL}/api/documents/${docId}/content`, {
         credentials: 'include', // Include cookies for session
       });
-      if (response.ok) {
-        const content = await response.json();
-        setDocumentContent(content);
+      
+      // Fetch chunks for this document
+      const chunksResponse = await fetch(`${API_BASE_URL}/api/chunks/${docId}`, {
+        credentials: 'include', // Include cookies for session
+      });
+      
+      if (contentResponse.ok && chunksResponse.ok) {
+        const content = await contentResponse.json();
+        const chunksData = await chunksResponse.json();
+        
+        // Combine content and chunks
+        setDocumentContent({
+          ...content,
+          chunks: chunksData.chunks || []
+        });
+      } else if (contentResponse.ok) {
+        // If chunks fetch fails, still show content
+        const content = await contentResponse.json();
+        setDocumentContent({
+          ...content,
+          chunks: []
+        });
       }
     } catch (error) {
       console.error('Failed to fetch document content:', error);
