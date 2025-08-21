@@ -212,19 +212,22 @@ export default function Home() {
         credentials: 'include', // Include cookies for session
       });
       if (response.ok) {
-        // Clear all chat-related state when document is deleted
+        // Immediately clear all chat-related state when document is deleted
         setQuestion('');
         setAnswer('');
         setCitations([]);
         setDocumentContent(null);
         
-        // Update documents list
-        fetchDocuments();
-        
         // Reset selected document if it was the deleted one
         if (selectedDocument === docId) {
           setSelectedDocument('all');
         }
+        
+        // Force a small delay to ensure state updates are processed
+        setTimeout(() => {
+          // Update documents list after state clearing
+          fetchDocuments();
+        }, 100);
       }
     } catch (error) {
       console.error('Failed to delete document:', error);
