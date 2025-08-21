@@ -29,9 +29,12 @@ openai.api_key = "your_openai_api_key_here"
 
 app = FastAPI(title="Advanced RAG Document Q&A API")
 
+# Get CORS origins from environment variable
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
