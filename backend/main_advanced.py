@@ -815,6 +815,12 @@ if __name__ == "__main__":
     import os
     
     # Get port from environment variable or use default
-    port = int(os.getenv("PORT", 8001))
+    port_str = os.getenv("PORT", "8001")
+    
+    # Handle cases where PORT might be literal '$PORT' string
+    if port_str == "$PORT" or not port_str.isdigit():
+        port = 8001
+    else:
+        port = int(port_str)
     
     uvicorn.run(app, host="0.0.0.0", port=port)
