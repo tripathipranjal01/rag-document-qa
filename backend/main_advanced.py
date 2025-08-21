@@ -25,7 +25,9 @@ import hashlib
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-openai.api_key = "your_openai_api_key_here"
+# Initialize OpenAI client
+openai.api_key = os.getenv("OPENAI_API_KEY")
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI(title="Advanced RAG Document Q&A API")
 
@@ -165,11 +167,11 @@ class RAGProcessor:
             return embedding_cache[text_hash]
         
         try:
-            response = openai.Embedding.create(
+            response = client.embeddings.create(
                 model="text-embedding-3-small",
                 input=text
             )
-            embedding = response['data'][0]['embedding']
+            embedding = response.data[0].embedding
             
             # Cache the embedding
             embedding_cache[text_hash] = embedding
@@ -708,7 +710,7 @@ async def ask_question(request: Request):
         context = "\n\n".join(context_chunks)
         
         # Generate answer using OpenAI
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
