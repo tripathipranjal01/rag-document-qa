@@ -442,6 +442,23 @@ async def get_documents(request: Request):
     logger.info(f"User docs count: {len(user_docs)}")
     logger.info(f"All documents: {documents}")
     
+    # If no documents found for current session, try to find any recent documents
+    if len(user_docs) == 0 and len(documents) > 0:
+        # Get the most recent session with documents
+        recent_sessions = []
+        for sess_id, docs in documents.items():
+            if docs:  # If session has documents
+                # Get the most recent document timestamp
+                latest_time = max(doc.get("created_at", "") for doc in docs.values())
+                recent_sessions.append((sess_id, latest_time))
+        
+        if recent_sessions:
+            # Sort by timestamp and get the most recent
+            recent_sessions.sort(key=lambda x: x[1], reverse=True)
+            most_recent_session = recent_sessions[0][0]
+            user_docs = documents.get(most_recent_session, {})
+            logger.info(f"Using documents from recent session: {most_recent_session}")
+    
     # Get shared documents
     shared_docs = []
     for doc_id, share_info in shared_documents.items():
