@@ -581,6 +581,14 @@ async def get_document_content(doc_id: str, request: Request):
                 doc = docs[doc_id]
                 break
     
+    # If not found in current session, search in all sessions (fallback)
+    if not doc:
+        for owner_session, docs in documents.items():
+            if doc_id in docs:
+                doc = docs[doc_id]
+                logger.info(f"Found document {doc_id} in session {owner_session} (fallback)")
+                break
+    
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
@@ -697,6 +705,12 @@ async def ask_question(request: Request):
             if session_id in share_info.get("shared_with", []):
                 shared_chunks = [c for c in chunks if c["doc_id"] == share_doc_id]
                 candidate_chunks.extend(shared_chunks)
+        
+        # If no chunks found in current session, try to find chunks from recent sessions (fallback)
+        if not candidate_chunks:
+            # Get all chunks from any session
+            candidate_chunks = [c for c in chunks]
+            logger.info(f"No chunks found for session {session_id}, using fallback with {len(candidate_chunks)} total chunks")
         
         if scope == "document" and doc_id:
             candidate_chunks = [chunk for chunk in candidate_chunks if chunk["doc_id"] == doc_id]
