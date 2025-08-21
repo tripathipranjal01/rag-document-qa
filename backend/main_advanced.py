@@ -10,28 +10,23 @@ import pickle
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from docx import Document as DocxDocument
-# import tiktoken  # Removed to avoid Rust compilation issues on Render
 import numpy as np
 import time
 from PIL import Image
 import pytesseract
-# import easyocr  # Removed to avoid GPU dependencies on Render
 import io
 import logging
 from collections import defaultdict, Counter
 import hashlib
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI client
 openai.api_key = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI(title="Advanced RAG Document Q&A API")
 
-# Get CORS origins from environment variable
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
 
 app.add_middleware(
@@ -42,13 +37,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global storage with session isolation
-documents = {}  # {session_id: {doc_id: doc_data}}
-chunks = []     # Global chunks with session_id
-sessions = {}   # {session_id: session_data}
+documents = {}
+chunks = []
+sessions = {}
 DATA_FILE = "data_advanced.pkl"
 
-# 🚀 Advanced Features: Analytics & Monitoring
 analytics = {
     "total_queries": 0,
     "total_documents": 0,
@@ -65,20 +58,16 @@ analytics = {
     }
 }
 
-# 🚀 Collaboration Features
-shared_documents = {}  # {doc_id: {shared_by: session_id, shared_with: [session_ids], permissions: "read"|"write"}}
-document_comments = {}  # {doc_id: [{session_id, comment, timestamp}]}
+shared_documents = {}
+document_comments = {}
 
-# 🚀 Performance Optimization: Caching
-embedding_cache = {}  # Simple in-memory cache for embeddings
-query_cache = {}      # Cache for similar queries
+embedding_cache = {}
+query_cache = {}
 
 def get_session_id(request: Request) -> str:
-    """Get or create session ID from cookies"""
     session_id = request.cookies.get("session_id")
     
     if not session_id or session_id not in sessions:
-        # Create new session
         session_id = str(uuid.uuid4())
         sessions[session_id] = {
             "id": session_id,
@@ -86,13 +75,11 @@ def get_session_id(request: Request) -> str:
             "last_activity": datetime.now().isoformat()
         }
     
-    # Update last activity
     sessions[session_id]["last_activity"] = datetime.now().isoformat()
     analytics["session_activity"][session_id] += 1
     return session_id
 
 def cleanup_old_sessions():
-    """Remove sessions older than 24 hours"""
     cutoff = datetime.now() - timedelta(hours=24)
     expired_sessions = []
     
@@ -106,12 +93,10 @@ def cleanup_old_sessions():
         if session_id in documents:
             del documents[session_id]
     
-    # Remove chunks for expired sessions
     global chunks
     chunks = [c for c in chunks if c.get("session_id") not in expired_sessions]
 
 def save_data():
-    """Save data to file with analytics"""
     data = {
         "documents": documents,
         "chunks": chunks,
@@ -124,7 +109,6 @@ def save_data():
         pickle.dump(data, f)
 
 def load_data():
-    """Load data from file"""
     global documents, chunks, sessions, analytics, shared_documents, document_comments
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "rb") as f:
@@ -136,7 +120,6 @@ def load_data():
             shared_documents = data.get("shared_documents", {})
             document_comments = data.get("document_comments", {})
 
-# Load existing data
 load_data()
 
 class RAGProcessor:
@@ -145,7 +128,6 @@ class RAGProcessor:
         self.chunk_overlap = 150
     
     def chunk_text(self, text: str) -> List[str]:
-        """Chunk text with overlap using simple word-based approach"""
         words = text.split()
         chunks = []
         
@@ -158,11 +140,8 @@ class RAGProcessor:
         return chunks
     
     def get_embedding(self, text: str) -> List[float]:
-        """Get embedding with caching"""
-        # Create cache key
         text_hash = hashlib.md5(text.encode()).hexdigest()
         
-        # Check cache first
         if text_hash in embedding_cache:
             return embedding_cache[text_hash]
         
@@ -173,7 +152,6 @@ class RAGProcessor:
             )
             embedding = response.data[0].embedding
             
-            # Cache the embedding
             embedding_cache[text_hash] = embedding
             analytics["api_usage"]["embeddings_generated"] += 1
             analytics["api_usage"]["tokens_processed"] += len(text.split())
@@ -184,7 +162,6 @@ class RAGProcessor:
             return None
     
     def cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
-        """Calculate cosine similarity"""
         vec1 = np.array(vec1)
         vec2 = np.array(vec2)
         return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
@@ -192,17 +169,13 @@ class RAGProcessor:
 rag_processor = RAGProcessor()
 
 def clean_markdown(text: str) -> str:
-    """Remove markdown formatting"""
-    # Remove asterisks, bold, italic
     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
     text = re.sub(r'\*(.*?)\*', r'\1', text)
-    # Remove other markdown
     text = re.sub(r'#+\s*', '', text)
     text = re.sub(r'`(.*?)`', r'\1', text)
     return text.strip()
 
 def extract_text_from_file(file_path: str, file_type: str) -> str:
-    """Extract text from various file types"""
     try:
         if file_type.lower() == '.pdf':
             with open(file_path, 'rb') as file:
@@ -229,7 +202,6 @@ def extract_text_from_file(file_path: str, file_type: str) -> str:
         raise Exception(f"Error extracting text from {file_type} file: {str(e)}")
 
 def extract_text_from_image(image_path: str) -> str:
-    """Extract text from image using OCR"""
     try:
         image = Image.open(image_path)
         try:
@@ -242,35 +214,27 @@ def extract_text_from_image(image_path: str) -> str:
         raise Exception(f"Error processing image: {str(e)}")
 
 def process_document_sync(file_id: str, file_path: str, filename: str, file_ext: str, session_id: str):
-    """Process document synchronously with analytics"""
     try:
-        # Update status
         documents[session_id][file_id]["status"] = "extracting"
         save_data()
         
-        # Extract text
         text_content = extract_text_from_file(file_path, file_ext)
         
-        # Update status
         documents[session_id][file_id]["status"] = "chunking"
         save_data()
         
-        # Chunk text
         text_chunks = rag_processor.chunk_text(text_content)
         
-        # Create embeddings and store chunks
         for i, chunk in enumerate(text_chunks):
             chunk_id = str(uuid.uuid4())
             
-            # Get embedding
             embedding = rag_processor.get_embedding(chunk)
             
-            # Create chunk record with metadata
             chunk_record = {
                 "id": chunk_id,
                 "doc_id": file_id,
                 "doc_name": filename,
-                "session_id": session_id,  # Add session isolation
+                "session_id": session_id,
                 "content": chunk,
                 "embedding": embedding,
                 "chunk_index": i,
@@ -280,13 +244,11 @@ def process_document_sync(file_id: str, file_path: str, filename: str, file_ext:
             
             chunks.append(chunk_record)
         
-        # Update document status
         documents[session_id][file_id]["status"] = "indexed"
         documents[session_id][file_id]["chunk_count"] = len(text_chunks)
         documents[session_id][file_id]["content"] = text_content
         documents[session_id][file_id]["file_type"] = file_ext
         
-        # Update analytics
         analytics["total_documents"] += 1
         analytics["total_chunks"] += len(text_chunks)
         analytics["document_types"][file_ext] += 1
@@ -305,10 +267,8 @@ def process_document_sync(file_id: str, file_path: str, filename: str, file_ext:
 
 @app.get("/api/health")
 async def health_check():
-    """Enhanced health check with analytics"""
     cleanup_old_sessions()
     
-    # Calculate performance metrics
     avg_query_time = np.mean(analytics["query_times"]) if analytics["query_times"] else 0
     total_sessions = len(sessions)
     active_sessions = len([s for s in sessions.values() 
@@ -337,10 +297,8 @@ async def health_check():
 
 @app.get("/api/analytics")
 async def get_analytics(request: Request):
-    """Get detailed analytics"""
     session_id = get_session_id(request)
     
-    # User-specific analytics
     user_docs = len(documents.get(session_id, {}))
     user_queries = analytics["session_activity"].get(session_id, 0)
     
@@ -366,36 +324,29 @@ async def get_analytics(request: Request):
 
 @app.post("/api/upload")
 async def upload_document(file: UploadFile = File(...), request: Request = None):
-    """Upload document with enhanced features"""
     session_id = get_session_id(request)
     
-    # Initialize session documents if not exists
     if session_id not in documents:
         documents[session_id] = {}
     
-    # Validate file type
     allowed_extensions = {'.pdf', '.docx', '.txt', '.png', '.jpg', '.jpeg', '.bmp', '.tiff'}
     file_ext = os.path.splitext(file.filename)[1].lower()
     
     if file_ext not in allowed_extensions:
         raise HTTPException(status_code=400, detail=f"File type {file_ext} not supported")
     
-    # Validate file size (30MB limit)
-    max_size = 30 * 1024 * 1024  # 30MB
+    max_size = 30 * 1024 * 1024
     if file.size > max_size:
         raise HTTPException(status_code=400, detail="File too large. Maximum size is 30MB")
     
-    # Generate unique file ID
     file_id = str(uuid.uuid4())
     
-    # Save file temporarily
     file_path = f"temp_{file_id}{file_ext}"
     try:
         with open(file_path, "wb") as buffer:
             content = await file.read()
             buffer.write(content)
         
-        # Initialize document record
         documents[session_id][file_id] = {
             "id": file_id,
             "filename": file.filename,
@@ -407,7 +358,6 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
         }
         save_data()
         
-        # Process document
         logger.info(f"Processing document {file_id} for session {session_id}")
         success = process_document_sync(file_id, file_path, file.filename, file_ext, session_id)
         
@@ -424,46 +374,36 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
             raise HTTPException(status_code=500, detail="Failed to process document")
             
     except Exception as e:
-        # Clean up on error
         if os.path.exists(file_path):
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/documents")
 async def get_documents(request: Request):
-    """Get documents with collaboration features"""
     session_id = get_session_id(request)
     
-    # Get user's own documents
     user_docs = documents.get(session_id, {})
     
-    # Add debugging
     logger.info(f"Session ID: {session_id}")
     logger.info(f"User docs count: {len(user_docs)}")
     logger.info(f"All documents: {documents}")
     
-    # If no documents found for current session, try to find any recent documents
     if len(user_docs) == 0 and len(documents) > 0:
-        # Get the most recent session with documents
         recent_sessions = []
         for sess_id, docs in documents.items():
-            if docs:  # If session has documents
-                # Get the most recent document timestamp
+            if docs:
                 latest_time = max(doc.get("created_at", "") for doc in docs.values())
                 recent_sessions.append((sess_id, latest_time))
         
         if recent_sessions:
-            # Sort by timestamp and get the most recent
             recent_sessions.sort(key=lambda x: x[1], reverse=True)
             most_recent_session = recent_sessions[0][0]
             user_docs = documents.get(most_recent_session, {})
             logger.info(f"Using documents from recent session: {most_recent_session}")
     
-    # Get shared documents
     shared_docs = []
     for doc_id, share_info in shared_documents.items():
         if session_id in share_info.get("shared_with", []):
-            # Find the original document
             for owner_session, docs in documents.items():
                 if doc_id in docs:
                     doc = docs[doc_id].copy()
@@ -472,7 +412,6 @@ async def get_documents(request: Request):
                     shared_docs.append(doc)
                     break
     
-    # Combine and format documents
     all_docs = []
     for doc in user_docs.values():
         doc_copy = doc.copy()
@@ -489,14 +428,11 @@ async def get_documents(request: Request):
 
 @app.post("/api/documents/{doc_id}/share")
 async def share_document(doc_id: str, request: Request):
-    """Share document with other sessions"""
     session_id = get_session_id(request)
     
-    # Check if user owns the document
     if session_id not in documents or doc_id not in documents[session_id]:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Get share request data
     data = await request.json()
     target_session = data.get("session_id")
     permissions = data.get("permissions", "read")
@@ -504,7 +440,6 @@ async def share_document(doc_id: str, request: Request):
     if not target_session:
         raise HTTPException(status_code=400, detail="Target session ID required")
     
-    # Initialize sharing
     if doc_id not in shared_documents:
         shared_documents[doc_id] = {
             "shared_by": session_id,
@@ -512,7 +447,6 @@ async def share_document(doc_id: str, request: Request):
             "permissions": "read"
         }
     
-    # Add to shared list
     if target_session not in shared_documents[doc_id]["shared_with"]:
         shared_documents[doc_id]["shared_with"].append(target_session)
     
@@ -522,21 +456,17 @@ async def share_document(doc_id: str, request: Request):
 
 @app.post("/api/documents/{doc_id}/comment")
 async def add_comment(doc_id: str, request: Request):
-    """Add comment to document"""
     session_id = get_session_id(request)
     
-    # Get comment data
     data = await request.json()
     comment_text = data.get("comment")
     
     if not comment_text:
         raise HTTPException(status_code=400, detail="Comment text required")
     
-    # Initialize comments if not exists
     if doc_id not in document_comments:
         document_comments[doc_id] = []
     
-    # Add comment
     comment = {
         "session_id": session_id,
         "comment": comment_text,
@@ -550,10 +480,8 @@ async def add_comment(doc_id: str, request: Request):
 
 @app.get("/api/documents/{doc_id}/comments")
 async def get_comments(doc_id: str, request: Request):
-    """Get comments for document"""
     session_id = get_session_id(request)
     
-    # Check access permissions
     has_access = False
     if session_id in documents and doc_id in documents[session_id]:
         has_access = True
@@ -567,21 +495,17 @@ async def get_comments(doc_id: str, request: Request):
 
 @app.get("/api/documents/{doc_id}/content")
 async def get_document_content(doc_id: str, request: Request):
-    """Get document content with access control"""
     session_id = get_session_id(request)
     
-    # Check access permissions
     doc = None
     if session_id in documents and doc_id in documents[session_id]:
         doc = documents[session_id][doc_id]
     elif doc_id in shared_documents and session_id in shared_documents[doc_id]["shared_with"]:
-        # Find shared document
         for owner_session, docs in documents.items():
             if doc_id in docs:
                 doc = docs[doc_id]
                 break
     
-    # If not found in current session, search in all sessions (fallback)
     if not doc:
         for owner_session, docs in documents.items():
             if doc_id in docs:
@@ -603,7 +527,6 @@ async def get_document_content(doc_id: str, request: Request):
 
 @app.get("/api/documents/{doc_id}/status")
 async def get_document_status(doc_id: str, request: Request):
-    """Get document status"""
     session_id = get_session_id(request)
     
     if session_id not in documents or doc_id not in documents[session_id]:
@@ -614,18 +537,15 @@ async def get_document_status(doc_id: str, request: Request):
 
 @app.delete("/api/documents/{doc_id}")
 async def delete_document(doc_id: str, request: Request):
-    """Delete document"""
     session_id = get_session_id(request)
     
     logger.info(f"Attempting to delete document {doc_id} from session {session_id}")
     logger.info(f"Available documents: {list(documents.keys())}")
     
-    # SIMPLE APPROACH: Find document in ANY session
     doc_found = False
     for owner_session, docs in documents.items():
         logger.info(f"Checking session {owner_session} with {len(docs)} documents")
         if doc_id in docs:
-            # Remove document
             del documents[owner_session][doc_id]
             doc_found = True
             logger.info(f"Successfully deleted document {doc_id} from session {owner_session}")
@@ -635,15 +555,12 @@ async def delete_document(doc_id: str, request: Request):
         logger.error(f"Document {doc_id} not found in any session")
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Remove chunks
     global chunks
     chunks = [c for c in chunks if c["doc_id"] != doc_id]
     
-    # Remove from shared documents
     if doc_id in shared_documents:
         del shared_documents[doc_id]
     
-    # Remove comments
     if doc_id in document_comments:
         del document_comments[doc_id]
     
@@ -653,10 +570,8 @@ async def delete_document(doc_id: str, request: Request):
 
 @app.post("/api/qa")
 async def ask_question(request: Request):
-    """Ask a question with enhanced analytics and caching"""
     session_id = get_session_id(request)
     
-    # Get request data
     data = await request.json()
     query = data.get("question", "")
     doc_id = data.get("document_id")
@@ -665,18 +580,15 @@ async def ask_question(request: Request):
     if not query:
         raise HTTPException(status_code=400, detail="Question is required")
     
-    # Update analytics
     analytics["total_queries"] += 1
     analytics["popular_queries"][query.lower()[:50]] += 1
     
-    # Check query cache
     query_hash = hashlib.md5(f"{query}_{doc_id}_{scope}".encode()).hexdigest()
     if query_hash in query_cache:
         cached_result = query_cache[query_hash]
         cached_result["cached"] = True
         return cached_result
     
-    # SIMPLE APPROACH: Get ALL indexed documents from ALL sessions
     session_docs = []
     for owner_session, docs in documents.items():
         for doc in docs.values():
@@ -695,7 +607,6 @@ async def ask_question(request: Request):
     try:
         start_time = time.time()
         
-        # Get query embedding
         query_embedding = rag_processor.get_embedding(query)
         if not query_embedding:
             return {
@@ -704,23 +615,20 @@ async def ask_question(request: Request):
                 "sources": []
             }
         
-        # SIMPLE APPROACH: Get ALL chunks from ALL sessions
         candidate_chunks = [c for c in chunks]
         logger.info(f"Found {len(candidate_chunks)} total chunks across all sessions")
         
         if scope == "document" and doc_id:
             candidate_chunks = [chunk for chunk in candidate_chunks if chunk["doc_id"] == doc_id]
         
-        # Calculate similarities
         similarities = []
         for chunk in candidate_chunks:
             if chunk.get("embedding"):
                 similarity = rag_processor.cosine_similarity(query_embedding, chunk["embedding"])
                 similarities.append((similarity, chunk))
         
-        # Sort by similarity and return top-k
         similarities.sort(key=lambda x: x[0], reverse=True)
-        top_results = similarities[:8]  # Top 8 results
+        top_results = similarities[:8]
         
         if not top_results:
             return {
@@ -729,7 +637,6 @@ async def ask_question(request: Request):
                 "sources": []
             }
         
-        # Prepare context for LLM
         context_chunks = []
         relevant_chunks = []
         
@@ -745,7 +652,6 @@ async def ask_question(request: Request):
         
         context = "\n\n".join(context_chunks)
         
-        # Generate answer using OpenAI
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -765,9 +671,8 @@ async def ask_question(request: Request):
         answer = response.choices[0].message.content
         answer = clean_markdown(answer)
         
-        # Prepare citations
         citations = []
-        for result in relevant_chunks[:3]:  # Top 3 citations
+        for result in relevant_chunks[:3]:
             citations.append({
                 "text": result["content"][:200] + "..." if len(result["content"]) > 200 else result["content"],
                 "page": result["page"],
@@ -778,9 +683,8 @@ async def ask_question(request: Request):
         
         processing_time = time.time() - start_time
         
-        # Update analytics
         analytics["query_times"].append(processing_time)
-        if len(analytics["query_times"]) > 100:  # Keep only last 100 queries
+        if len(analytics["query_times"]) > 100:
             analytics["query_times"] = analytics["query_times"][-100:]
         
         result = {
@@ -792,10 +696,8 @@ async def ask_question(request: Request):
             "cached": False
         }
         
-        # Cache the result
         query_cache[query_hash] = result
-        if len(query_cache) > 1000:  # Limit cache size
-            # Remove oldest entries
+        if len(query_cache) > 1000:
             oldest_keys = list(query_cache.keys())[:100]
             for key in oldest_keys:
                 del query_cache[key]
@@ -811,19 +713,16 @@ async def ask_question(request: Request):
 
 @app.get("/api/session")
 async def get_session_info(request: Request, response: Response):
-    """Get or create session information"""
     session_id = get_session_id(request)
     
-    # Set session cookie
     response.set_cookie(
         key="session_id",
         value=session_id,
         httponly=True,
-        max_age=86400,  # 24 hours
+        max_age=86400,
         samesite="lax"
     )
     
-    # Count documents for this session
     document_count = len(documents.get(session_id, {}))
     
     return {
@@ -835,16 +734,13 @@ async def get_session_info(request: Request, response: Response):
 
 @app.delete("/api/session")
 async def clear_session(request: Request, response: Response):
-    """Clear current session"""
     session_id = get_session_id(request)
     
-    # Remove session data
     if session_id in documents:
         del documents[session_id]
     if session_id in sessions:
         del sessions[session_id]
     
-    # Remove session cookie
     response.delete_cookie("session_id")
     
     save_data()
@@ -853,8 +749,6 @@ async def clear_session(request: Request, response: Response):
 
 @app.get("/api/chunks")
 async def get_chunks(request: Request):
-    """Get all chunks for demonstration purposes"""
-    # Get all chunks from all sessions
     all_chunks = []
     
     for chunk in chunks:
@@ -877,8 +771,6 @@ async def get_chunks(request: Request):
 
 @app.get("/api/chunks/{doc_id}")
 async def get_document_chunks(doc_id: str, request: Request):
-    """Get chunks for a specific document"""
-    # Find chunks for this document
     document_chunks = []
     
     for chunk in chunks:
@@ -906,8 +798,6 @@ async def get_document_chunks(doc_id: str, request: Request):
 
 @app.get("/api/chunking-stats")
 async def get_chunking_stats(request: Request):
-    """Get chunking statistics for demonstration"""
-    # Group chunks by document
     doc_chunks = {}
     for chunk in chunks:
         doc_id = chunk["doc_id"]
@@ -915,13 +805,10 @@ async def get_chunking_stats(request: Request):
             doc_chunks[doc_id] = []
         doc_chunks[doc_id].append(chunk)
     
-    # Calculate statistics
     stats = []
     for doc_id, doc_chunk_list in doc_chunks.items():
-        # Find document name
         doc_name = doc_chunk_list[0]["doc_name"] if doc_chunk_list else "Unknown"
         
-        # Calculate average chunk length
         total_length = sum(len(chunk["content"]) for chunk in doc_chunk_list)
         avg_length = total_length / len(doc_chunk_list) if doc_chunk_list else 0
         
@@ -944,10 +831,8 @@ if __name__ == "__main__":
     import uvicorn
     import os
     
-    # Get port from environment variable or use default
     port_str = os.getenv("PORT", "8001")
     
-    # Handle cases where PORT might be literal '$PORT' string
     if port_str == "$PORT" or not port_str.isdigit():
         port = 8001
     else:

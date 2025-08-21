@@ -60,7 +60,6 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch documents and session info on component mount
   useEffect(() => {
     fetchSessionInfo();
     fetchDocuments();
@@ -95,7 +94,7 @@ export default function Home() {
         setCitations([]);
         setDocumentContent(null);
         setSelectedDocument('all');
-        fetchSessionInfo(); // Get new session
+        fetchSessionInfo();
       }
     } catch (error) {
       console.error('Failed to clear session:', error);
@@ -116,7 +115,7 @@ export default function Home() {
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
         body: formData,
-        credentials: 'include', // Include cookies for session
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -124,7 +123,6 @@ export default function Home() {
         console.log('Upload result:', result);
         setUploadStatus({ type: 'success', message: `File uploaded successfully: ${result.filename}` });
         
-        // Refresh documents list immediately and after a delay
         await fetchDocuments();
         setTimeout(() => fetchDocuments(), 2000);
       } else {
@@ -143,7 +141,7 @@ export default function Home() {
   const fetchDocuments = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/documents`, {
-        credentials: 'include', // Include cookies for session
+        credentials: 'include',
       });
       if (response.ok) {
         const docs = await response.json();
@@ -159,27 +157,23 @@ export default function Home() {
 
   const fetchDocumentContent = async (docId: string) => {
     try {
-      // Fetch document content
       const contentResponse = await fetch(`${API_BASE_URL}/api/documents/${docId}/content`, {
-        credentials: 'include', // Include cookies for session
+        credentials: 'include',
       });
       
-      // Fetch chunks for this document
       const chunksResponse = await fetch(`${API_BASE_URL}/api/chunks/${docId}`, {
-        credentials: 'include', // Include cookies for session
+        credentials: 'include',
       });
       
       if (contentResponse.ok && chunksResponse.ok) {
         const content = await contentResponse.json();
         const chunksData = await chunksResponse.json();
         
-        // Combine content and chunks
         setDocumentContent({
           ...content,
           chunks: chunksData.chunks || []
         });
       } else if (contentResponse.ok) {
-        // If chunks fetch fails, still show content
         const content = await contentResponse.json();
         setDocumentContent({
           ...content,
@@ -209,23 +203,19 @@ export default function Home() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/documents/${docId}`, {
         method: 'DELETE',
-        credentials: 'include', // Include cookies for session
+        credentials: 'include',
       });
       if (response.ok) {
-        // Immediately clear all chat-related state when document is deleted
         setQuestion('');
         setAnswer('');
         setCitations([]);
         setDocumentContent(null);
         
-        // Reset selected document if it was the deleted one
         if (selectedDocument === docId) {
           setSelectedDocument('all');
         }
         
-        // Force a small delay to ensure state updates are processed
         setTimeout(() => {
-          // Update documents list after state clearing
           fetchDocuments();
         }, 100);
       }
@@ -248,7 +238,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Include cookies for session
+        credentials: 'include',
         body: JSON.stringify({
           question: question,
           document_id: selectedDocument === 'all' ? null : selectedDocument,
