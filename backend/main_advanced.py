@@ -408,9 +408,11 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
         save_data()
         
         # Process document
+        logger.info(f"Processing document {file_id} for session {session_id}")
         success = process_document_sync(file_id, file_path, file.filename, file_ext, session_id)
         
         if success:
+            logger.info(f"Document {file_id} processed successfully")
             return {
                 "file_id": file_id,
                 "filename": file.filename,
@@ -418,6 +420,7 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
                 "message": "File uploaded and processed successfully."
             }
         else:
+            logger.error(f"Document {file_id} processing failed")
             raise HTTPException(status_code=500, detail="Failed to process document")
             
     except Exception as e:
@@ -433,6 +436,11 @@ async def get_documents(request: Request):
     
     # Get user's own documents
     user_docs = documents.get(session_id, {})
+    
+    # Add debugging
+    logger.info(f"Session ID: {session_id}")
+    logger.info(f"User docs count: {len(user_docs)}")
+    logger.info(f"All documents: {documents}")
     
     # Get shared documents
     shared_docs = []
@@ -459,6 +467,7 @@ async def get_documents(request: Request):
         doc_copy["ownership"] = "shared"
         all_docs.append(doc_copy)
     
+    logger.info(f"Returning {len(all_docs)} documents")
     return all_docs
 
 @app.post("/api/documents/{doc_id}/share")
