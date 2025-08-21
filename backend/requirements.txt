@@ -8,9 +8,11 @@ tiktoken==0.5.2
 numpy>=1.24.3
 Pillow>=10.0.1
 pytesseract==0.3.10
-easyocr>=1.7.0
 requests>=2.31.0
 pytest>=7.4.3
 httpx>=0.25.2
 setuptools>=68.0.0
 wheel>=0.40.0
+# Use CPU-only OCR instead of easyocr to avoid GPU dependencies
+pytesseract>=0.3.10
+opencv-python-headless>=4.8.0

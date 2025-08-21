@@ -15,7 +15,7 @@ import numpy as np
 import time
 from PIL import Image
 import pytesseract
-import easyocr
+# import easyocr  # Removed to avoid GPU dependencies on Render
 import io
 import logging
 from collections import defaultdict, Counter
@@ -228,17 +228,6 @@ def extract_text_from_image(image_path: str) -> str:
     """Extract text from image using OCR"""
     try:
         image = Image.open(image_path)
-        try:
-            reader = easyocr.Reader(['en'])
-            results = reader.readtext(image_path)
-            text = ""
-            for (bbox, text_detected, confidence) in results:
-                if confidence > 0.5:
-                    text += text_detected + "\n"
-            if text.strip():
-                return text
-        except Exception as e:
-            print(f"EasyOCR failed, trying Tesseract: {e}")
         try:
             text = pytesseract.image_to_string(image, lang='eng')
             return text
