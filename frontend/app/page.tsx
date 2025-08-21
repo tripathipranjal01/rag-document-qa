@@ -207,15 +207,23 @@ export default function Home() {
 
   const deleteDocument = async (docId: string) => {
     try {
-              const response = await fetch(`${API_BASE_URL}/api/documents/${docId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/documents/${docId}`, {
         method: 'DELETE',
         credentials: 'include', // Include cookies for session
       });
       if (response.ok) {
+        // Clear all chat-related state when document is deleted
+        setQuestion('');
+        setAnswer('');
+        setCitations([]);
+        setDocumentContent(null);
+        
+        // Update documents list
         fetchDocuments();
+        
+        // Reset selected document if it was the deleted one
         if (selectedDocument === docId) {
           setSelectedDocument('all');
-          setDocumentContent(null);
         }
       }
     } catch (error) {
