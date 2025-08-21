@@ -839,6 +839,95 @@ async def clear_session(request: Request, response: Response):
     
     return {"message": "Session cleared successfully"}
 
+@app.get("/api/chunks")
+async def get_chunks(request: Request):
+    """Get all chunks for demonstration purposes"""
+    # Get all chunks from all sessions
+    all_chunks = []
+    
+    for chunk in chunks:
+        chunk_info = {
+            "id": chunk["id"],
+            "doc_id": chunk["doc_id"],
+            "doc_name": chunk["doc_name"],
+            "content": chunk["content"],
+            "chunk_index": chunk.get("chunk_index", 0),
+            "page": chunk.get("page", 1),
+            "created_at": chunk.get("created_at", ""),
+            "session_id": chunk.get("session_id", "")
+        }
+        all_chunks.append(chunk_info)
+    
+    return {
+        "total_chunks": len(all_chunks),
+        "chunks": all_chunks
+    }
+
+@app.get("/api/chunks/{doc_id}")
+async def get_document_chunks(doc_id: str, request: Request):
+    """Get chunks for a specific document"""
+    # Find chunks for this document
+    document_chunks = []
+    
+    for chunk in chunks:
+        if chunk["doc_id"] == doc_id:
+            chunk_info = {
+                "id": chunk["id"],
+                "doc_id": chunk["doc_id"],
+                "doc_name": chunk["doc_name"],
+                "content": chunk["content"],
+                "chunk_index": chunk.get("chunk_index", 0),
+                "page": chunk.get("page", 1),
+                "created_at": chunk.get("created_at", ""),
+                "session_id": chunk.get("session_id", "")
+            }
+            document_chunks.append(chunk_info)
+    
+    if not document_chunks:
+        raise HTTPException(status_code=404, detail="No chunks found for this document")
+    
+    return {
+        "doc_id": doc_id,
+        "total_chunks": len(document_chunks),
+        "chunks": document_chunks
+    }
+
+@app.get("/api/chunking-stats")
+async def get_chunking_stats(request: Request):
+    """Get chunking statistics for demonstration"""
+    # Group chunks by document
+    doc_chunks = {}
+    for chunk in chunks:
+        doc_id = chunk["doc_id"]
+        if doc_id not in doc_chunks:
+            doc_chunks[doc_id] = []
+        doc_chunks[doc_id].append(chunk)
+    
+    # Calculate statistics
+    stats = []
+    for doc_id, doc_chunk_list in doc_chunks.items():
+        # Find document name
+        doc_name = doc_chunk_list[0]["doc_name"] if doc_chunk_list else "Unknown"
+        
+        # Calculate average chunk length
+        total_length = sum(len(chunk["content"]) for chunk in doc_chunk_list)
+        avg_length = total_length / len(doc_chunk_list) if doc_chunk_list else 0
+        
+        stats.append({
+            "doc_id": doc_id,
+            "doc_name": doc_name,
+            "chunk_count": len(doc_chunk_list),
+            "avg_chunk_length": round(avg_length, 2),
+            "total_content_length": total_length
+        })
+    
+    return {
+        "total_documents": len(stats),
+        "total_chunks": len(chunks),
+        "average_chunks_per_doc": round(len(chunks) / len(stats), 2) if stats else 0,
+        "document_stats": stats
+    }
+
 if __name__ == "__main__":
     import uvicorn
     import os
