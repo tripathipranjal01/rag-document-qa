@@ -617,11 +617,18 @@ async def delete_document(doc_id: str, request: Request):
     """Delete document"""
     session_id = get_session_id(request)
     
-    if session_id not in documents or doc_id not in documents[session_id]:
-        raise HTTPException(status_code=404, detail="Document not found")
+    # SIMPLE APPROACH: Find document in ANY session
+    doc_found = False
+    for owner_session, docs in documents.items():
+        if doc_id in docs:
+            # Remove document
+            del documents[owner_session][doc_id]
+            doc_found = True
+            logger.info(f"Deleted document {doc_id} from session {owner_session}")
+            break
     
-    # Remove document
-    del documents[session_id][doc_id]
+    if not doc_found:
+        raise HTTPException(status_code=404, detail="Document not found")
     
     # Remove chunks
     global chunks
