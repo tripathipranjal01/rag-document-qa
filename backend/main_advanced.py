@@ -699,18 +699,22 @@ async def ask_question(request: Request):
         
         # Filter chunks by document if specified
         candidate_chunks = [c for c in chunks if c.get("session_id") == session_id]
+        logger.info(f"Found {len(candidate_chunks)} chunks for current session {session_id}")
         
         # Add shared document chunks
         for share_doc_id, share_info in shared_documents.items():
             if session_id in share_info.get("shared_with", []):
                 shared_chunks = [c for c in chunks if c["doc_id"] == share_doc_id]
                 candidate_chunks.extend(shared_chunks)
+                logger.info(f"Added {len(shared_chunks)} shared chunks")
         
         # If no chunks found in current session, try to find chunks from recent sessions (fallback)
         if not candidate_chunks:
             # Get all chunks from any session
             candidate_chunks = [c for c in chunks]
             logger.info(f"No chunks found for session {session_id}, using fallback with {len(candidate_chunks)} total chunks")
+        else:
+            logger.info(f"Using {len(candidate_chunks)} chunks from current session")
         
         if scope == "document" and doc_id:
             candidate_chunks = [chunk for chunk in candidate_chunks if chunk["doc_id"] == doc_id]
