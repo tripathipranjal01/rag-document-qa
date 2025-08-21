@@ -664,28 +664,14 @@ async def ask_question(request: Request):
         cached_result["cached"] = True
         return cached_result
     
-    # Filter documents by session
-    session_docs = [
-        doc for doc in documents.get(session_id, {}).values() 
-        if doc.get("status") == "indexed"
-    ]
+    # SIMPLE APPROACH: Get ALL indexed documents from ALL sessions
+    session_docs = []
+    for owner_session, docs in documents.items():
+        for doc in docs.values():
+            if doc.get("status") == "indexed":
+                session_docs.append(doc)
     
-    # Add shared documents
-    for share_doc_id, share_info in shared_documents.items():
-        if session_id in share_info.get("shared_with", []):
-            for owner_session, docs in documents.items():
-                if share_doc_id in docs and docs[share_doc_id]["status"] == "indexed":
-                    session_docs.append(docs[share_doc_id])
-                    break
-    
-    # If no documents found in current session, try to find documents from recent sessions (fallback)
-    if not session_docs:
-        # Get all indexed documents from any session
-        for owner_session, docs in documents.items():
-            for doc in docs.values():
-                if doc.get("status") == "indexed":
-                    session_docs.append(doc)
-        logger.info(f"No documents found for session {session_id}, using fallback with {len(session_docs)} total documents")
+    logger.info(f"Found {len(session_docs)} total indexed documents across all sessions")
     
     if not session_docs:
         return {
@@ -706,24 +692,9 @@ async def ask_question(request: Request):
                 "sources": []
             }
         
-        # Filter chunks by document if specified
-        candidate_chunks = [c for c in chunks if c.get("session_id") == session_id]
-        logger.info(f"Found {len(candidate_chunks)} chunks for current session {session_id}")
-        
-        # Add shared document chunks
-        for share_doc_id, share_info in shared_documents.items():
-            if session_id in share_info.get("shared_with", []):
-                shared_chunks = [c for c in chunks if c["doc_id"] == share_doc_id]
-                candidate_chunks.extend(shared_chunks)
-                logger.info(f"Added {len(shared_chunks)} shared chunks")
-        
-        # If no chunks found in current session, try to find chunks from recent sessions (fallback)
-        if not candidate_chunks:
-            # Get all chunks from any session
-            candidate_chunks = [c for c in chunks]
-            logger.info(f"No chunks found for session {session_id}, using fallback with {len(candidate_chunks)} total chunks")
-        else:
-            logger.info(f"Using {len(candidate_chunks)} chunks from current session")
+        # SIMPLE APPROACH: Get ALL chunks from ALL sessions
+        candidate_chunks = [c for c in chunks]
+        logger.info(f"Found {len(candidate_chunks)} total chunks across all sessions")
         
         if scope == "document" and doc_id:
             candidate_chunks = [chunk for chunk in candidate_chunks if chunk["doc_id"] == doc_id]
