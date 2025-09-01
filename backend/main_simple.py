@@ -1265,7 +1265,8 @@ async def ask_question_stream(request: Request):
         
         if not top_results:
             async def error_stream():
-                yield f"data: {json.dumps({'type': 'error', 'message': 'I couldn\'t find relevant information in the documents to answer your question.'})}\n\n"
+                error_msg = "I couldn't find relevant information in the documents to answer your question."
+                yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
                 yield f"data: {json.dumps({'type': 'end'})}\n\n"
             return StreamingResponse(error_stream(), media_type="text/plain")
         
