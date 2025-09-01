@@ -31,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    logger.warning("OPENAI_API_KEY environment variable is not set. API features will be limited.")
-    OPENAI_API_KEY = None
+    raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it with your actual OpenAI API key.")
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,https://your-frontend-domain.onrender.com").split(",")
 ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
@@ -139,9 +138,7 @@ def clear_progress(file_id: str):
     if file_id in document_progress:
         del document_progress[file_id]
 
-# Temporarily disable OpenAI client to test Railway DNS issues
-client = None
-logger.info("OpenAI client disabled for testing")
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 documents = {}
 chunks = []
@@ -242,32 +239,7 @@ def load_data():
             document_progress = data.get("document_progress", {})
 
 # Load existing data
-try:
-    load_data()
-    logger.info("Data loaded successfully")
-except Exception as e:
-    logger.warning(f"Failed to load existing data: {e}")
-    # Initialize empty data structures
-    documents = {}
-    chunks = []
-    sessions = {}
-    analytics = {
-        "total_documents": 0,
-        "total_queries": 0,
-        "total_chunks": 0,
-        "query_times": [],
-        "popular_queries": Counter(),
-        "document_types": Counter(),
-        "api_usage": {
-            "embeddings_generated": 0,
-            "tokens_processed": 0,
-            "api_calls": 0
-        }
-    }
-    shared_documents = {}
-    document_comments = {}
-    chat_history = {}
-    document_progress = {}
+load_data()
 
 class RAGProcessor:
     def __init__(self):
@@ -290,10 +262,6 @@ class RAGProcessor:
     
     def get_embedding(self, text: str) -> List[float]:
         """Get embedding with caching"""
-        if not client:
-            logger.error("OpenAI client not available. Cannot generate embeddings.")
-            return None
-            
         # Create cache key
         text_hash = hashlib.md5(text.encode()).hexdigest()
         
@@ -314,12 +282,6 @@ class RAGProcessor:
             analytics["api_usage"]["tokens_processed"] += len(text.split())
             
             return embedding
-        except OSError as e:
-            if "Name or service not known" in str(e):
-                logger.warning(f"DNS resolution failed for OpenAI API: {e}")
-            else:
-                logger.error(f"Network error getting embedding: {e}")
-            return None
         except Exception as e:
             logger.error(f"Error getting embedding: {e}")
             return None
@@ -531,17 +493,32 @@ def process_document_sync(file_id: str, file_path: str, filename: str, file_ext:
 
 @app.get("/")
 async def root():
-    return {"message": "RAG Document Q&A Backend is running", "status": "healthy"}
+    return {"message": "RAG Document Q&A Backend is running", "status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.get("/debug")
 async def debug():
-    return {"message": "Debug endpoint working"}
+    return {"message": "Debug endpoint working", "timestamp": datetime.now().isoformat()}
 
 @app.get("/api/health")
 async def health_check():
-    """Simple health check endpoint for Railway deployment"""
-    # Ultra-simple health check to avoid any DNS issues
-    return {"status": "healthy", "message": "OK"}
+    """Simple health check endpoint for Render deployment"""
+    try:
+        # Basic API key check
+        api_key_status = "valid" if OPENAI_API_KEY and OPENAI_API_KEY != "your_openai_api_key_here" else "error"
+        
+        return {
+            "status": "healthy",
+            "message": "RAG Document Q&A API is running",
+            "timestamp": datetime.now().isoformat(),
+            "api_key_configured": api_key_status == "valid",
+            "version": "1.0.0"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Health check failed: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }
 
 @app.get("/healthz")
 async def healthz():
@@ -1128,29 +1105,21 @@ async def ask_question(request: Request):
         if not client:
             return "I'm sorry, the OpenAI service is currently unavailable. Please try again later."
         
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "You are a helpful assistant that answers questions based ONLY on the provided document content. You must follow these rules: 1) If the answer is not found in the provided documents, respond with 'I don't know' or 'I cannot find this information in the uploaded documents.' 2) Never make up information or use knowledge outside the provided context. 3) Always provide complete answers in plain text without markdown formatting. 4) Include specific references to documents when possible. 5) Be honest about the limitations of the available information."
-                    },
-                    {
-                        "role": "user", 
-                        "content": f"Document content:\n{context}\n\nQuestion: {query}\n\nPlease provide a complete and detailed answer in plain text without any formatting:"
-                    }
-                ],
-                max_tokens=1500,
-                temperature=0.3
-            )
-        except OSError as e:
-            if "Name or service not known" in str(e):
-                return "I'm sorry, there's a temporary network issue. Please try again in a moment."
-            else:
-                return f"Network error: {str(e)}"
-        except Exception as e:
-            return f"Error generating answer: {str(e)}"
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "You are a helpful assistant that answers questions based ONLY on the provided document content. You must follow these rules: 1) If the answer is not found in the provided documents, respond with 'I don't know' or 'I cannot find this information in the uploaded documents.' 2) Never make up information or use knowledge outside the provided context. 3) Always provide complete answers in plain text without markdown formatting. 4) Include specific references to documents when possible. 5) Be honest about the limitations of the available information."
+                },
+                {
+                    "role": "user", 
+                    "content": f"Document content:\n{context}\n\nQuestion: {query}\n\nPlease provide a complete and detailed answer in plain text without any formatting:"
+                }
+            ],
+            max_tokens=1500,
+            temperature=0.3
+        )
         
         answer = response.choices[0].message.content
         answer = clean_markdown(answer)
@@ -1336,12 +1305,6 @@ async def ask_question_stream(request: Request):
             yield f"data: {json.dumps({'type': 'start', 'message': 'Generating answer...'})}\n\n"
             
             # Generate streaming answer using OpenAI
-            if not client:
-                error_msg = "OpenAI service is currently unavailable. Please try again later."
-                yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
-                yield f"data: {json.dumps({'type': 'end'})}\n\n"
-                return
-                
             try:
                 stream = client.chat.completions.create(
                     model="gpt-4o-mini",
