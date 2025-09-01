@@ -139,15 +139,9 @@ def clear_progress(file_id: str):
     if file_id in document_progress:
         del document_progress[file_id]
 
-try:
-    client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-    if client and OPENAI_API_KEY:
-        logger.info("OpenAI client initialized successfully")
-        # Skip API test during startup to avoid DNS issues
-        # Connection will be tested on first actual use
-except Exception as e:
-    logger.warning(f"Failed to initialize OpenAI client: {e}")
-    client = None
+# Temporarily disable OpenAI client to test Railway DNS issues
+client = None
+logger.info("OpenAI client disabled for testing")
 
 documents = {}
 chunks = []
