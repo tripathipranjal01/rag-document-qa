@@ -248,7 +248,32 @@ def load_data():
             document_progress = data.get("document_progress", {})
 
 # Load existing data
-load_data()
+try:
+    load_data()
+    logger.info("Data loaded successfully")
+except Exception as e:
+    logger.warning(f"Failed to load existing data: {e}")
+    # Initialize empty data structures
+    documents = {}
+    chunks = []
+    sessions = {}
+    analytics = {
+        "total_documents": 0,
+        "total_queries": 0,
+        "total_chunks": 0,
+        "query_times": [],
+        "popular_queries": Counter(),
+        "document_types": Counter(),
+        "api_usage": {
+            "embeddings_generated": 0,
+            "tokens_processed": 0,
+            "api_calls": 0
+        }
+    }
+    shared_documents = {}
+    document_comments = {}
+    chat_history = {}
+    document_progress = {}
 
 class RAGProcessor:
     def __init__(self):
@@ -512,32 +537,17 @@ def process_document_sync(file_id: str, file_path: str, filename: str, file_ext:
 
 @app.get("/")
 async def root():
-    return {"message": "RAG Document Q&A Backend is running", "status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {"message": "RAG Document Q&A Backend is running", "status": "healthy"}
 
 @app.get("/debug")
 async def debug():
-    return {"message": "Debug endpoint working", "timestamp": datetime.now().isoformat()}
+    return {"message": "Debug endpoint working"}
 
 @app.get("/api/health")
 async def health_check():
-    """Simple health check endpoint for Render deployment"""
-    try:
-        # Basic API key check
-        api_key_status = "valid" if OPENAI_API_KEY and OPENAI_API_KEY != "your_openai_api_key_here" else "error"
-        
-        return {
-            "status": "healthy",
-            "message": "RAG Document Q&A API is running",
-            "timestamp": datetime.now().isoformat(),
-            "api_key_configured": api_key_status == "valid",
-            "version": "1.0.0"
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Health check failed: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }
+    """Simple health check endpoint for Railway deployment"""
+    # Ultra-simple health check to avoid any DNS issues
+    return {"status": "healthy", "message": "OK"}
 
 @app.get("/healthz")
 async def healthz():
