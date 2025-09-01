@@ -1116,6 +1116,9 @@ async def ask_question(request: Request):
         context = "\n\n".join(context_chunks)
         
         # Generate answer using OpenAI
+        if not client:
+            return "I'm sorry, the OpenAI service is currently unavailable. Please try again later."
+        
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -1316,6 +1319,12 @@ async def ask_question_stream(request: Request):
             yield f"data: {json.dumps({'type': 'start', 'message': 'Generating answer...'})}\n\n"
             
             # Generate streaming answer using OpenAI
+            if not client:
+                error_msg = "OpenAI service is currently unavailable. Please try again later."
+                yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
+                yield f"data: {json.dumps({'type': 'end'})}\n\n"
+                return
+                
             try:
                 stream = client.chat.completions.create(
                     model="gpt-4o-mini",
