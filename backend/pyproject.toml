@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-document-qa"
+version = "1.0.0"
+description = "RAG Document Q&A System"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "openai",
+    "python-dotenv",
+    "PyPDF2",
+    "python-docx",
+    "tiktoken",
+    "numpy",
+    "Pillow",
+    "pytesseract",
+    "easyocr",
+    "httpx",
+]
+
+[tool.setuptools]
+packages = ["backend"]
