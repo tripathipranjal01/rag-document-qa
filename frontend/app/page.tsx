@@ -136,6 +136,7 @@ export default function Home() {
             });
           }, 500); // Reduced from 3000ms to 500ms for immediate cleanup
           fetchDocuments();
+          fetchSessionInfo(); // Update session info when document processing completes
         }
       }
             } catch (err) {
@@ -171,6 +172,7 @@ export default function Home() {
         }
         
         await fetchDocuments();
+        fetchSessionInfo(); // Update session info to reflect new document count
       } else {
         const error = await response.json();
         console.error('Upload error:', error);
