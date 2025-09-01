@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it with your actual OpenAI API key.")
+    logger.warning("OPENAI_API_KEY environment variable is not set. API features will be limited.")
+    OPENAI_API_KEY = None
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,https://your-frontend-domain.onrender.com").split(",")
 ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
@@ -138,7 +139,16 @@ def clear_progress(file_id: str):
     if file_id in document_progress:
         del document_progress[file_id]
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+try:
+    client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+    if client and OPENAI_API_KEY:
+        # Test connection during startup
+        logger.info("Testing OpenAI API connection...")
+        test_response = client.models.list()
+        logger.info("OpenAI API connection successful")
+except Exception as e:
+    logger.warning(f"Failed to initialize OpenAI client: {e}")
+    client = None
 
 documents = {}
 chunks = []
@@ -262,6 +272,10 @@ class RAGProcessor:
     
     def get_embedding(self, text: str) -> List[float]:
         """Get embedding with caching"""
+        if not client:
+            logger.error("OpenAI client not available. Cannot generate embeddings.")
+            return None
+            
         # Create cache key
         text_hash = hashlib.md5(text.encode()).hexdigest()
         
