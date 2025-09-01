@@ -15,11 +15,10 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from docx import Document as DocxDocument
 import tiktoken
-import numpy as np
 import time
 from PIL import Image
 import pytesseract
-import easyocr
+# import easyocr  # Temporarily disabled for faster deployment
 import io
 import logging
 from collections import defaultdict, Counter
@@ -288,10 +287,13 @@ class RAGProcessor:
             return None
     
     def cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
-        """Calculate cosine similarity"""
-        vec1 = np.array(vec1)
-        vec2 = np.array(vec2)
-        return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+        """Calculate cosine similarity without numpy"""
+        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        magnitude1 = sum(a * a for a in vec1) ** 0.5
+        magnitude2 = sum(b * b for b in vec2) ** 0.5
+        if magnitude1 == 0 or magnitude2 == 0:
+            return 0
+        return dot_product / (magnitude1 * magnitude2)
 
 rag_processor = RAGProcessor()
 
@@ -333,23 +335,15 @@ def extract_text_from_file(file_path: str, file_type: str) -> str:
         raise Exception(f"Error extracting text from {file_type} file: {str(e)}")
 
 def extract_text_from_image(image_path: str) -> str:
-    """Extract text from image using OCR"""
+    """Extract text from image using OCR (Tesseract only for faster deployment)"""
     try:
         image = Image.open(image_path)
         try:
-            reader = easyocr.Reader(['en'])
-            results = reader.readtext(image_path)
-            text = ""
-            for (bbox, text_detected, confidence) in results:
-                if confidence > 0.5:
-                    text += text_detected + "\n"
+            text = pytesseract.image_to_string(image, lang='eng')
             if text.strip():
                 return text
-        except Exception as e:
-            print(f"EasyOCR failed, trying Tesseract: {e}")
-        try:
-            text = pytesseract.image_to_string(image, lang='eng')
-            return text
+            else:
+                return "No text detected in image."
         except Exception as e:
             print(f"Tesseract failed: {e}")
             return "OCR failed to extract text from this image."
@@ -550,7 +544,7 @@ async def get_analytics(request: Request):
             "total_documents": analytics["total_documents"],
             "total_queries": analytics["total_queries"],
             "total_chunks": analytics["total_chunks"],
-            "avg_query_time": np.mean(analytics["query_times"]) if analytics["query_times"] else 0
+            "avg_query_time": sum(analytics["query_times"]) / len(analytics["query_times"]) if analytics["query_times"] else 0
         },
         "popular_queries": dict(analytics["popular_queries"].most_common(5)),
         "file_type_distribution": dict(analytics["document_types"]),
