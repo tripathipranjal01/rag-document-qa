@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Upload, Send, File, MessageSquare, Loader2, CheckCircle, AlertCircle, Eye, Trash2, Clock, FileText, Plus, Search, BookOpen } from 'lucide-react';
 
 interface Document {
@@ -74,14 +74,9 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchSessionInfo();
-    fetchDocuments();
-  }, []);
-
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
-  const fetchSessionInfo = async () => {
+  const fetchSessionInfo = useCallback(async () => {
     setSessionLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/session`, {
@@ -96,7 +91,7 @@ export default function Home() {
     } finally {
       setSessionLoading(false);
     }
-  };
+  }, [API_BASE_URL]);
 
   const clearSession = async () => {
     try {
@@ -143,9 +138,9 @@ export default function Home() {
           fetchDocuments();
         }
       }
-    } catch (error) {
-      console.error('Error polling progress:', error);
-    }
+            } catch (err) {
+          console.error('Error polling progress:', err);
+        }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,7 +192,7 @@ export default function Home() {
         }
         setUploadStatus({ type: 'error', message: errorMessage });
       }
-    } catch (error) {
+    } catch (_error) {
       setUploadStatus({ type: 'error', message: 'Upload failed: Network error. Please check your connection and try again.' });
     } finally {
       setUploading(false);
@@ -205,7 +200,7 @@ export default function Home() {
     }
   };
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     setDocumentsLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/documents`, {
@@ -223,7 +218,13 @@ export default function Home() {
     } finally {
       setDocumentsLoading(false);
     }
-  };
+  }, [API_BASE_URL]);
+
+  // Initialize data on component mount
+  useEffect(() => {
+    fetchSessionInfo();
+    fetchDocuments();
+  }, [fetchSessionInfo, fetchDocuments]);
 
   const fetchDocumentContent = async (docId: string) => {
     setDocumentContentLoading(true);
@@ -281,6 +282,7 @@ export default function Home() {
     }
   }, [documentContent, selectedDocument]);
 
+  // Citation click handler - used in citation components
   const handleCitationClick = (chunkId: string) => {
     setSelectedChunk(chunkId);
     setViewerMode('chunks');
@@ -344,7 +346,7 @@ export default function Home() {
         setAnswer('Failed to get answer. Please try again.');
         setCitations([]);
       }
-    } catch (error) {
+    } catch (_error) {
       setAnswer('Network error. Please check your connection.');
       setCitations([]);
     } finally {
@@ -758,10 +760,8 @@ export default function Home() {
                               onClick={() => {
                                 if (citation.chunk_id) {
                                   // Find the document that contains this chunk
-                                  const chunkDoc = documents.find(doc => {
-                                    // This is a simplified approach - in practice you'd need to check which doc contains the chunk
-                                    return true;
-                                  });
+                                  // const chunkDoc = documents.find(doc => doc.id === citation.doc_id);
+                                  // TODO: Implement proper chunk-to-document mapping
                                   
                                   setSelectedChunk(citation.chunk_id);
                                   setActiveTab('documents');
@@ -898,7 +898,7 @@ export default function Home() {
                           <Search className="h-10 w-10 text-gray-400" />
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to search</h3>
-                        <p className="text-gray-500 text-sm">Click "Ask" to search through your {documents.length} document{documents.length === 1 ? '' : 's'}</p>
+                        <p className="text-gray-500 text-sm">Click &quot;Ask&quot; to search through your {documents.length} document{documents.length === 1 ? '' : 's'}</p>
                       </div>
                     )}
                   </div>
