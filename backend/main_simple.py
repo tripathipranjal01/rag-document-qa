@@ -1372,14 +1372,16 @@ async def ask_question_stream(request: Request):
                 
             except Exception as e:
                 logger.error(f"Error in streaming response: {e}")
-                yield f"data: {json.dumps({'type': 'error', 'message': f'Error generating answer: {str(e)}'})}\n\n"
+                error_msg = f'Error generating answer: {str(e)}'
+                yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
                 yield f"data: {json.dumps({'type': 'end'})}\n\n"
         
         return StreamingResponse(stream_response(), media_type="text/plain")
         
     except Exception as e:
         async def error_stream():
-            yield f"data: {json.dumps({'type': 'error', 'message': f'Error processing question: {str(e)}'})}\n\n"
+            error_msg = f'Error processing question: {str(e)}'
+            yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
             yield f"data: {json.dumps({'type': 'end'})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/plain")
 
