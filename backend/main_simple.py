@@ -142,10 +142,9 @@ def clear_progress(file_id: str):
 try:
     client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
     if client and OPENAI_API_KEY:
-        # Test connection during startup
-        logger.info("Testing OpenAI API connection...")
-        test_response = client.models.list()
-        logger.info("OpenAI API connection successful")
+        logger.info("OpenAI client initialized successfully")
+        # Skip API test during startup to avoid DNS issues
+        # Connection will be tested on first actual use
 except Exception as e:
     logger.warning(f"Failed to initialize OpenAI client: {e}")
     client = None
@@ -296,6 +295,12 @@ class RAGProcessor:
             analytics["api_usage"]["tokens_processed"] += len(text.split())
             
             return embedding
+        except OSError as e:
+            if "Name or service not known" in str(e):
+                logger.warning(f"DNS resolution failed for OpenAI API: {e}")
+            else:
+                logger.error(f"Network error getting embedding: {e}")
+            return None
         except Exception as e:
             logger.error(f"Error getting embedding: {e}")
             return None
@@ -1119,21 +1124,29 @@ async def ask_question(request: Request):
         if not client:
             return "I'm sorry, the OpenAI service is currently unavailable. Please try again later."
         
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "You are a helpful assistant that answers questions based ONLY on the provided document content. You must follow these rules: 1) If the answer is not found in the provided documents, respond with 'I don't know' or 'I cannot find this information in the uploaded documents.' 2) Never make up information or use knowledge outside the provided context. 3) Always provide complete answers in plain text without markdown formatting. 4) Include specific references to documents when possible. 5) Be honest about the limitations of the available information."
-                },
-                {
-                    "role": "user", 
-                    "content": f"Document content:\n{context}\n\nQuestion: {query}\n\nPlease provide a complete and detailed answer in plain text without any formatting:"
-                }
-            ],
-            max_tokens=1500,
-            temperature=0.3
-        )
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "You are a helpful assistant that answers questions based ONLY on the provided document content. You must follow these rules: 1) If the answer is not found in the provided documents, respond with 'I don't know' or 'I cannot find this information in the uploaded documents.' 2) Never make up information or use knowledge outside the provided context. 3) Always provide complete answers in plain text without markdown formatting. 4) Include specific references to documents when possible. 5) Be honest about the limitations of the available information."
+                    },
+                    {
+                        "role": "user", 
+                        "content": f"Document content:\n{context}\n\nQuestion: {query}\n\nPlease provide a complete and detailed answer in plain text without any formatting:"
+                    }
+                ],
+                max_tokens=1500,
+                temperature=0.3
+            )
+        except OSError as e:
+            if "Name or service not known" in str(e):
+                return "I'm sorry, there's a temporary network issue. Please try again in a moment."
+            else:
+                return f"Network error: {str(e)}"
+        except Exception as e:
+            return f"Error generating answer: {str(e)}"
         
         answer = response.choices[0].message.content
         answer = clean_markdown(answer)
